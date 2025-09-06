@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "id": 1,
+      "name": "Project_Report.pdf",
+      "type": "pdf",
+      "size": "2.4 MB",
+      "date": "2023-05-15",
+      "path": "uploads/project-report.pdf"
+    },
+    {
+      "id": 2,
+      "name": "Vacation_Photos.zip",
+      "type": "zip",
+      "size": "15.2 MB",
+      "date": "2023-06-22",
+      "path": "uploads/vacation-photos.zip"
+    },
+    {
+      "id": 3,
+      "name": "Financial_Spreadsheet.xlsx",
+      "type": "xlsx",
+      "size": "1.1 MB",
+      "date": "2023-07-10",
+      "path": "uploads/financial-spreadsheet.xlsx"
+    },
+    {
+      "id": 1757171677756,
+      "name": "65780dc9b2717fab906272cf_genetics-Q.-2.png",
+      "type": "png",
+      "size": "26.54 KB",
+      "date": "2025-09-06",
+      "path": "uploads\\mf8enbxdhkmz1-65780dc9b2717fab906272cf_genetics-Q.-2.png"
+    }
+  ]
+}

@@ -1,0 +1,396 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CloudVault - 25GB Storage</title>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; }
+        
+        /* Preloader Styles */
+        .preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0061ff, #0048b3);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+        
+        .preloader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .preloader h2 {
+            color: white;
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        
+        .preloader p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+        }
+        
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: white;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        /* Main App Styles */
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #0061ff, #0048b3); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .header h1 { display: flex; align-items: center; gap: 15px; }
+        .storage-info { background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-top: 15px; }
+        .storage-bar { height: 10px; background: rgba(255,255,255,0.3); border-radius: 5px; margin: 10px 0; overflow: hidden; }
+        .storage-fill { height: 100%; background: white; width: 0%; transition: width 0.5s; }
+        .controls { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
+        .btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px; }
+        .btn-primary { background: #0061ff; color: white; }
+        .btn-primary:hover { background: #0050d8; }
+        .upload-area { background: white; border: 2px dashed #ddd; border-radius: 10px; padding: 30px; text-align: center; margin: 20px 0; cursor: pointer; }
+        .upload-area:hover { border-color: #0061ff; background: #f8f9ff; }
+        .search-bar { display: flex; margin: 20px 0; }
+        .search-bar input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px 0 0 6px; }
+        .search-bar button { padding: 12px 20px; background: #0061ff; color: white; border: none; border-radius: 0 6px 6px 0; cursor: pointer; }
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        .file-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .file-icon { height: 100px; display: flex; align-items: center; justify-content: center; background: #f5f7fa; font-size: 40px; color: #0061ff; }
+        .file-info { padding: 15px; }
+        .file-name { font-weight: bold; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-meta { display: flex; justify-content: space-between; color: #666; font-size: 12px; }
+        .file-actions { display: flex; border-top: 1px solid #eee; }
+        .file-action { flex: 1; padding: 10px; border: none; background: none; cursor: pointer; color: #666; }
+        .file-action:hover { background: #f5f7fa; }
+        .file-action.delete:hover { color: #e74c3c; }
+        .notification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: white; font-weight: bold; z-index: 1000; transform: translateX(120%); transition: transform 0.3s; }
+        .notification.show { transform: translateX(0); }
+        .notification.success { background: #28a745; }
+        .notification.error { background: #dc3545; }
+        .no-files { grid-column: 1/-1; text-align: center; padding: 40px; color: #666; }
+        @media (max-width: 768px) { 
+            .file-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+            .controls { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Professional Preloader -->
+    <div class="preloader" id="preloader">
+        <div class="spinner"></div>
+        <h2>CloudVault</h2>
+        <p>Loading your cloud storage...</p>
+        <div class="progress-bar">
+            <div class="progress" id="preloaderProgress"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-cloud"></i> CloudVault</h1>
+            <div class="storage-info">
+                <div>Storage</div>
+                <div class="storage-bar">
+                    <div class="storage-fill" id="storageFill"></div>
+                </div>
+                <div id="storageDetails">Loading storage info...</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="uploadBtn">
+                <i class="fas fa-cloud-upload-alt"></i> Upload Files
+            </button>
+            <input type="file" id="fileInput" multiple style="display: none;">
+        </div>
+
+        <div class="search-bar">
+            <input type="text" placeholder="Search files..." id="searchInput">
+            <button id="searchBtn"><i class="fas fa-search"></i></button>
+        </div>
+
+        <div class="upload-area" id="dropArea">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #0061ff; margin-bottom: 15px;"></i>
+            <h3>Drag & Drop files here</h3>
+            <p>or click the upload button above</p>
+        </div>
+
+        <div class="file-grid" id="fileGrid">
+            <!-- Files will be loaded here -->
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Preloader functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const preloader = document.getElementById('preloader');
+            const progress = document.getElementById('preloaderProgress');
+            
+            // Simulate loading progress
+            let progressValue = 0;
+            const interval = setInterval(() => {
+                progressValue += Math.random() * 15;
+                if (progressValue >= 100) {
+                    progressValue = 100;
+                    clearInterval(interval);
+                    
+                    // Hide preloader after a short delay
+                    setTimeout(() => {
+                        preloader.classList.add('hidden');
+                        // Initialize the app after preloader is hidden
+                        initializeApp();
+                    }, 300);
+                }
+                progress.style.width = progressValue + '%';
+            }, 100);
+        });
+
+        // App initialization function
+        function initializeApp() {
+            // DOM Elements
+            const fileGrid = document.getElementById('fileGrid');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const fileInput = document.getElementById('fileInput');
+            const dropArea = document.getElementById('dropArea');
+            const searchInput = document.getElementById('searchInput');
+            const searchBtn = document.getElementById('searchBtn');
+            const notification = document.getElementById('notification');
+            const storageFill = document.getElementById('storageFill');
+            const storageDetails = document.getElementById('storageDetails');
+
+            // State
+            let files = [];
+            let storageInfo = { used: "0 GB", total: "25 GB", percentage: 0 };
+
+            // Fetch files
+            async function fetchFiles() {
+                try {
+                    const response = await fetch('/api/files');
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    files = await response.json();
+                    renderFiles();
+                } catch (error) {
+                    console.error('Fetch files error:', error);
+                    showNotification('Failed to load files: ' + error.message, 'error');
+                }
+            }
+
+            // Fetch storage info
+            async function fetchStorageInfo() {
+                try {
+                    const response = await fetch('/api/storage');
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    storageInfo = await response.json();
+                    updateStorageDisplay();
+                } catch (error) {
+                    console.error('Fetch storage error:', error);
+                    storageDetails.textContent = 'Error loading storage info';
+                }
+            }
+
+            // Update storage display
+            function updateStorageDisplay() {
+                storageFill.style.width = `${storageInfo.percentage}%`;
+                storageDetails.textContent = `${storageInfo.used} of ${storageInfo.total} used`;
+            }
+
+            // Render files
+            function renderFiles(filter = '') {
+                fileGrid.innerHTML = '';
+                
+                const filteredFiles = files.filter(file => 
+                    file.name.toLowerCase().includes(filter.toLowerCase())
+                );
+                
+                if (filteredFiles.length === 0) {
+                    fileGrid.innerHTML = '<div class="no-files">No files found</div>';
+                    return;
+                }
+                
+                filteredFiles.forEach(file => {
+                    const card = document.createElement('div');
+                    card.className = 'file-card';
+                    card.innerHTML = `
+                        <div class="file-icon">
+                            <i class="fas fa-file-${getFileIcon(file.type)}"></i>
+                        </div>
+                        <div class="file-info">
+                            <div class="file-name" title="${file.name}">${file.name}</div>
+                            <div class="file-meta">
+                                <span>${file.size}</span>
+                                <span>${file.date}</span>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="file-action" onclick="downloadFile(${file.id})" title="Download">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button class="file-action delete" onclick="deleteFile(${file.id})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    fileGrid.appendChild(card);
+                });
+            }
+
+            // Get file icon
+            function getFileIcon(type) {
+                const icons = {
+                    'pdf': 'pdf', 'zip': 'archive', 'xlsx': 'excel',
+                    'pptx': 'powerpoint', 'docx': 'word', 'mp4': 'video',
+                    'jpg': 'image', 'png': 'image', 'txt': 'alt'
+                };
+                return icons[type] || 'alt';
+            }
+
+            // Download file
+            function downloadFile(id) {
+                window.location.href = `/api/download/${id}`;
+            }
+
+            // Delete file
+            async function deleteFile(id) {
+                if (!confirm('Are you sure you want to delete this file?')) return;
+                
+                try {
+                    const response = await fetch(`/api/files/${id}`, { method: 'DELETE' });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    showNotification('File deleted successfully', 'success');
+                    fetchFiles();
+                    fetchStorageInfo();
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    showNotification('Failed to delete file: ' + error.message, 'error');
+                }
+            }
+
+            // Show notification
+            function showNotification(message, type) {
+                notification.textContent = message;
+                notification.className = `notification ${type} show`;
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+
+            // Upload files
+            async function uploadFiles(fileList) {
+                const formData = new FormData();
+                for (let file of fileList) {
+                    formData.append('file', file);
+                }
+
+                try {
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || `HTTP ${response.status}`);
+                    }
+                    
+                    showNotification('Files uploaded successfully!', 'success');
+                    fetchFiles();
+                    fetchStorageInfo();
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    showNotification('Upload failed: ' + error.message, 'error');
+                }
+            }
+
+            // Event Listeners
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    uploadFiles(e.target.files);
+                    e.target.value = ''; // Reset input
+                }
+            });
+
+            dropArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropArea.style.borderColor = '#0061ff';
+                dropArea.style.backgroundColor = '#f8f9ff';
+            });
+
+            dropArea.addEventListener('dragleave', (e) => {
+                dropArea.style.borderColor = '#ddd';
+                dropArea.style.backgroundColor = 'white';
+            });
+
+            dropArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropArea.style.borderColor = '#ddd';
+                dropArea.style.backgroundColor = 'white';
+                
+                if (e.dataTransfer.files.length > 0) {
+                    uploadFiles(e.dataTransfer.files);
+                }
+            });
+
+            searchBtn.addEventListener('click', () => {
+                renderFiles(searchInput.value);
+            });
+
+            searchInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    renderFiles(searchInput.value);
+                }
+            });
+
+            // Initialize app
+            fetchFiles();
+            fetchStorageInfo();
+            
+            // Make functions globally accessible for inline event handlers
+            window.downloadFile = downloadFile;
+            window.deleteFile = deleteFile;
+        }
+    </script>
+</body>
+</html>

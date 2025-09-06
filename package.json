@@ -1,0 +1,13 @@
+{
+  "name": "cloudvault",
+  "version": "1.0.0",
+  "description": "Personal cloud storage solution with JSON file storage",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": "13.14.0"
+  }
+}
